@@ -9,6 +9,7 @@ using MiniAudioPlayer.Graphics;
 using OpenTK.Graphics.OpenGL;
 using MiniAudioPlayer.Embedded;
 using System.IO;
+using OpenTK.Mathematics;
 
 namespace MiniAudioPlayer
 {
@@ -41,7 +42,7 @@ namespace MiniAudioPlayer
         private int selectedTrackIndex;
         private float[] waveformData;
         private Complex[] fftData;
-        private float[] textureData;
+        private Vector3[] textureData;
         private float seekPreviewValue;
         private bool isDraggingSlider;
         private string shaderError = string.Empty;
@@ -76,7 +77,7 @@ namespace MiniAudioPlayer
 
             waveformData = new float[audioPlayer.PeriodSize];
             fftData = new Complex[audioPlayer.PeriodSize / 2];
-            textureData = new float[audioPlayer.PeriodSize / 2 * 3];
+            textureData = new Vector3[audioPlayer.PeriodSize / 2];
 
             audioTexture = new Texture2D(audioPlayer.PeriodSize / 2, 1, InternalFormat.Rgb32f, PixelFormat.Rgb, PixelType.Float, textureSettings, false);
             visualizer.AddTexture(audioTexture, "uAudio");
@@ -170,7 +171,7 @@ namespace MiniAudioPlayer
                 GetWaveformData(frameCount);
                 GetFrequencyData(frameCount);
 
-                var span = new ReadOnlySpan<float>(textureData);
+                var span = new ReadOnlySpan<Vector3>(textureData);
                 audioTexture.Bind();
                 audioTexture.SubImage2D(0, 0, frameCount, 1, PixelFormat.Rgb, PixelType.Float, span);
                 audioTexture.Unbind();
@@ -329,15 +330,12 @@ namespace MiniAudioPlayer
             ImGui.Text(totalTimeText);
 
 
-            // 1. Define padding and calculate button widths based on font style
             float styleItemSpacingX = ImGui.GetStyle().ItemSpacing.X;
             float buttonPlayPauseWidth = ImGui.CalcTextSize(audioPlayer.IsPlaying ? FontAwesome.ICON_FA_PAUSE : FontAwesome.ICON_FA_PLAY).X + (ImGui.GetStyle().FramePadding.X * 2.0f);
             float buttonStopWidth = ImGui.CalcTextSize(FontAwesome.ICON_FA_STOP).X + (ImGui.GetStyle().FramePadding.X * 2.0f);
 
-            // 2. Sum up total width of the control group
             float totalGroupWidth = buttonPlayPauseWidth + styleItemSpacingX + buttonStopWidth;
 
-            // 3. Calculate center starting position relative to the window content region
             float startPosX = (ImGui.GetContentRegionAvail().X - totalGroupWidth) * 0.5f;
 
             if (startPosX > 0.0f)
@@ -468,20 +466,22 @@ namespace MiniAudioPlayer
             return 8; // Length of "HH:mm:ss"
         }
 
-        private void GetWaveformData(int frameCount)
+        private unsafe void GetWaveformData(int frameCount)
         {
-            for (int i = 0; i < frameCount; i++)
+            fixed(Vector3 *pTextureData = &textureData[0])
             {
-                textureData[i * 3] = (waveformData[i * 2] + waveformData[i * 2 + 1]) * 0.5f;
+                for (int i = 0; i < frameCount; i++)
+                {
+                    pTextureData[i].X = (waveformData[i * 2] + waveformData[i * 2 + 1]) * 0.5f;
+                }                
             }
         }
 
-        private void GetFrequencyData(int frameCount)
+        private unsafe void GetFrequencyData(int frameCount)
         {
-            // Transfer from waveform (Red) to FFT input
             for (int i = 0; i < frameCount; i++)
             {
-                fftData[i].Real = textureData[i * 3];
+                fftData[i].Real = textureData[i].X;
                 fftData[i].Imag = 0.0f;
             }
 
@@ -495,40 +495,37 @@ namespace MiniAudioPlayer
             float attackSpeed = 0.8f;
             float falloffSpeed = 0.92f;
 
-            for (int i = 0; i < binCount; i++)
+            fixed(Vector3 *pTextureData = &textureData[0])
             {
-                float re = fftData[i].Real;
-                float im = fftData[i].Imag;
-
-                // Magnitude normalized to 0.0 - 1.0 range
-                float mag = MathF.Sqrt(re * re + im * im) * scale;
-
-                float db = 20.0f * MathF.Log10(mag + 1e-6f);
-
-                float target = (db - minDb) / (-minDb);
-                target = MathF.Max(0.0f, MathF.Min(target, 1.0f));
-
-                float tilt = (float)i / (float)(i / 2);
-                target *= (1.0f + tilt * 2.0f);
-
-                float current = re;
-
-                if (target > current)
+                for (int i = 0; i < binCount; i++)
                 {
-                    textureData[(i * 3) + 1] = current + (target - current) * attackSpeed;
+                    float re = fftData[i].Real;
+                    float im = fftData[i].Imag;
+
+                    // Magnitude normalized to 0.0 - 1.0 range
+                    float mag = MathF.Sqrt(re * re + im * im) * scale;
+
+                    float db = 20.0f * MathF.Log10(mag + 1e-6f);
+
+                    float target = (db - minDb) / (-minDb);
+                    target = MathF.Max(0.0f, MathF.Min(target, 1.0f));
+
+                    float tilt = (float)i / (float)(i / 2);
+                    target *= (1.0f + tilt * 2.0f);
+
+                    float current = re;
+
+                    if (target > current)
+                        pTextureData[i].Y = current + (target - current) * attackSpeed;
+                    else
+                        pTextureData[i].Y = current * falloffSpeed;
                 }
-                else
+
+                // Zero out the unused half of the Green channel
+                for (int i = binCount; i < frameCount; i++)
                 {
-                    textureData[(i * 3) + 1] = current * falloffSpeed;
-                }
-
-                //textureData[(i * 3) + 1] = mag;
-            }
-
-            // Zero out the unused half of the Green channel
-            for (int i = binCount; i < frameCount; i++)
-            {
-                textureData[(i * 3) + 1] = 0.0f;
+                    pTextureData[i].Y = 0.0f;
+                }                
             }
         }
 

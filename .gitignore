@@ -1,0 +1,6 @@
+/.vscode
+/bin
+/obj
+/shaders
+imgui.ini
+MiniAudioPlayer.csproj.lscache

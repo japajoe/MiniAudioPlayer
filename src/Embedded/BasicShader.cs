@@ -19,62 +19,48 @@ void main() {
     
     gl_Position = vec4(x, y, 0.0, 1.0);
 }";
-        private static readonly string fragmentSource = @"void main() {
-    // 1. Sample the frequency magnitude from the green channel
-    // Using TexCoords.x to map the 512 bins across the screen width
-    float magnitude = texture(uAudio, vec2(TexCoords.x * 0.5, 0.5)).g;
-
-    // 2. Adjust scaling
-    // Magnitude from FFT can be small; boost it to fill vertical space
-    float barHeight = magnitude * 2.5;
-
-    // 3. Create the bar 
-    // step() returns 1.0 if the vertical pixel is below the barHeight
-    float bar = step(TexCoords.y, barHeight * 3.0);
-
-    // 4. Color Logic
-    // Create a vertical gradient: Blue at bottom, Green at top
-    vec3 barColor = mix(vec3(0.0, 0.5, 1.0), vec3(0.0, 1.0, 0.2), TexCoords.y);
-    vec3 currentFrame = barColor * bar;
-
-    // 5. Feedback Loop (Ghosting/Trails)
-    // Sample previous frame with a slight downward 'melt'
-    vec2 trailUV = TexCoords + vec2(0.0, 0.005); 
-    vec3 prevFrame = texture(uTexture, trailUV).rgb;
-
-    // Use max to keep the bright live bars while fading the old ones
-    float decay = 0.85;
-    //vec3 finalColor = max(currentFrame, prevFrame * decay);
-    vec3 finalColor = currentFrame;
-
-    FragColor = vec4(finalColor, 1.0);
+        private static readonly string fragmentSource = @"vec3 get_heatmap(float intensity) {
+    vec3 black = vec3(0.0, 0.0, 0.0);
+    vec3 blue = vec3(0.05, 0.05, 0.4);
+    vec3 purple = vec3(0.5, 0.0, 0.5);
+    vec3 red = vec3(0.9, 0.1, 0.1);
+    vec3 orange = vec3(1.0, 0.5, 0.0);
+    vec3 yellow = vec3(1.0, 1.0, 0.7);
+    
+    vec3 color = mix(black, blue, smoothstep(0.0, 0.1, intensity));
+    color = mix(color, purple, smoothstep(0.1, 0.3, intensity));
+    color = mix(color, red, smoothstep(0.3, 0.6, intensity));
+    color = mix(color, orange, smoothstep(0.6, 0.8, intensity));
+    color = mix(color, yellow, smoothstep(0.8, 1.0, intensity));
+    
+    return color;
 }
 
-void main2() {
-    // 1. Audio sampling and centering
-    float raw = texture(uAudio, vec2(TexCoords.x, 0.5)).r;
-    float waveY = raw * 0.5 + 0.5;
+void main() {
+    // Use the exact width of one pixel to prevent sub-pixel sampling drift
+    float speed = (1.0 / textureSize(uTexture, 0).x) * 2.0;
     
-    // 2. Waveform drawing
-    // Narrow thickness prevents the whole screen from turning green
-    float dist = abs(TexCoords.y - waveY);
-    float currentLine = smoothstep(0.004, 0.002, dist);
-    vec3 currentColor = vec3(0.55, 0.89, 0.40) * currentLine;
-
-    // 3. Feedback logic
-    // Sample with a slight zoom (99.5%) to create movement
-    vec2 zoomUV = (TexCoords - 0.5) * 0.995 + 0.5;
-    vec3 prevFrame = texture(uTexture, zoomUV).rgb;
-
-    // 4. Persistence and combine
-    // 0.88 decay ensures trails fade out within a few frames
-    // max() prevents the additive white-out/green-out
-    float decay = 0.88;
-    vec3 finalRGB = max(currentColor, prevFrame * decay);
-
-    // 5. Final output
-    // Forced 1.0 alpha to prevent transparency issues in the buffer swap
-    FragColor = vec4(finalRGB, 1.0);
+    if (TexCoords.x > 1.0 - speed) {
+        // Maps the vertical screen space (0.0 to 1.0) to 
+        // the first half of the audio texture (0.0 to 0.5).
+        float yCoord = TexCoords.y * 0.5;
+        
+        float fft = texture(uAudio, vec2(yCoord, 0.0)).g;
+        float fftUp = texture(uAudio, vec2(yCoord + 0.005, 0.0)).g;
+        float fftDown = texture(uAudio, vec2(yCoord - 0.005, 0.0)).g;
+        
+        float visualIntensity = (fft * 0.6) + (fftUp * 0.2) + (fftDown * 0.2);
+        visualIntensity = pow(visualIntensity, 0.8);
+        
+        vec3 finalColor = get_heatmap(visualIntensity);
+        
+        FragColor = vec4(finalColor, 1.0);
+    } else {
+        // Direct 1:1 shift to the left
+        vec2 uv = vec2(TexCoords.x + speed, TexCoords.y);
+        
+        FragColor = texture(uTexture, uv);
+    }
 }";
 
         private static readonly string headerSource = @"#version 330 core

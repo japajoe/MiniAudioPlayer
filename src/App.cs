@@ -45,7 +45,7 @@ namespace MiniAudioPlayer
         private Vector3[] textureData;
         private float seekPreviewValue;
         private bool isDraggingSlider;
-        private string shaderError = string.Empty;
+        private string shaderError = "Hello world";
         private string currentShaderPath;
         private readonly char[] currentTimeBuffer = new char[12];
         private readonly char[] totalTimeBuffer = new char[12];
@@ -83,6 +83,8 @@ namespace MiniAudioPlayer
             visualizer.AddTexture(audioTexture, "uAudio");
 
             SetLayout();
+
+            audioPlayer.AddTracks("/home/wesley/Desktop/FLProjects/best beats/");
         }
 
         protected override void OnClose()
@@ -182,6 +184,9 @@ namespace MiniAudioPlayer
         {
             visualizer.Render();
             ImGui.DockSpaceOverViewport();
+
+            //ImGui.ShowMetricsWindow();
+
             ShowMenu();
             ShowVisualizer();
             ShowPlaylist();
@@ -387,7 +392,8 @@ namespace MiniAudioPlayer
             size.X -= 5;
             size.Y -= 5;
 
-            ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size, ImGuiInputTextFlags.ReadOnly);
+            //ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size, ImGuiInputTextFlags.ReadOnly);
+            ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size);
             ImGui.End();
         }
 
@@ -477,6 +483,8 @@ namespace MiniAudioPlayer
             }
         }
 
+        private float[] fftDataPrevious;
+
         private unsafe void GetFrequencyData(int frameCount)
         {
             for (int i = 0; i < frameCount; i++)
@@ -491,9 +499,10 @@ namespace MiniAudioPlayer
             // Populate Green channel
             int binCount = frameCount / 2;
             float scale = 2.0f / frameCount; // 2.0 compensates for Hann window energy loss
-            float minDb = -60.0f;
-            float attackSpeed = 0.8f;
-            float falloffSpeed = 0.92f;
+            float smoothFactor = 0.4f;
+
+            if(fftDataPrevious == null)
+                fftDataPrevious = new float[binCount];
 
             fixed(Vector3 *pTextureData = &textureData[0])
             {
@@ -506,19 +515,17 @@ namespace MiniAudioPlayer
                     float mag = MathF.Sqrt(re * re + im * im) * scale;
 
                     float db = 20.0f * MathF.Log10(mag + 1e-6f);
+                    float normalized = (db + 100.0f) / 100.0f;
 
-                    float target = (db - minDb) / (-minDb);
-                    target = MathF.Max(0.0f, MathF.Min(target, 1.0f));
+                    if (normalized < 0.0f)
+                        normalized = 0.0f;
+                    if (normalized > 1.0f)
+                        normalized = 1.0f;
 
-                    float tilt = (float)i / (float)(i / 2);
-                    target *= (1.0f + tilt * 2.0f);
+                    float prevVal = fftDataPrevious[i];
 
-                    float current = re;
-
-                    if (target > current)
-                        pTextureData[i].Y = current + (target - current) * attackSpeed;
-                    else
-                        pTextureData[i].Y = current * falloffSpeed;
+                    pTextureData[i].Y = (normalized * smoothFactor) + (fftDataPrevious[i] * (1.0f - smoothFactor));
+                    fftDataPrevious[i] = pTextureData[i].Y;
                 }
 
                 // Zero out the unused half of the Green channel
@@ -528,6 +535,8 @@ namespace MiniAudioPlayer
                 }                
             }
         }
+
+        private bool firstCompile = true;
 
         private void SetShader(string shaderPath)
         {
@@ -540,6 +549,12 @@ namespace MiniAudioPlayer
             if(shader.Generate(BasicShader.VertexSource, fragmentSource, out shaderError))
             {
                 visualizer.SetShader(shader);
+            }
+
+            if(firstCompile)
+            {
+                shaderError = "Test this stuff\n" + shaderError;
+                firstCompile = false;
             }
         }
 

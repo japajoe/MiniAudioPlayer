@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Unicode;
 using GLFWNet;
 using ImGuiNET;
 using MiniAudioPlayer.Core;
@@ -13,7 +15,17 @@ using Vector2 = System.Numerics.Vector2;
 
 namespace MiniAudioPlayer.Graphics
 {
-    public sealed class ImGuiController : IDisposable
+    struct BackendData
+    {
+        public IntPtr Context;
+        public IntPtr WindowPtr;
+        public long Time;
+        public Vector2 LastValidMousePos;
+        public bool WantUpdateMonitors;
+    }
+
+
+    public unsafe sealed class ImGuiController : IDisposable
     {
         private bool _frameBegun;
         private int _vertexArray;
@@ -30,6 +42,24 @@ namespace MiniAudioPlayer.Graphics
         private readonly KeyCode[] keycodes;
         private IntPtr pIconRanges;
 
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+        private static void SetClipboardText(IntPtr userData, IntPtr text)
+        {
+            if(text != IntPtr.Zero)
+            {
+                string txt = Marshal.PtrToStringUTF8(text);
+                glfwSetClipboardString(Application.NativeWindow, text);
+            }
+        }
+
+        [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+        private static unsafe nint GetClipboardText(IntPtr userData)
+        {
+            Console.WriteLine("Get");
+            // Native OS get logic (return persistent UTF-8 string pointer)
+            return glfwGetClipboardString(Application.NativeWindow);
+        }
+
         /// <summary>
         /// Constructs a new ImGuiController.
         /// </summary>
@@ -45,9 +75,33 @@ namespace MiniAudioPlayer.Graphics
 
             KHRDebugAvailable = (major == 4 && minor >= 3) || IsExtensionSupported("KHR_debug");
 
+
+
+
             IntPtr context = ImGui.CreateContext();
             ImGui.SetCurrentContext(context);
             var io = ImGui.GetIO();
+
+
+            // BackendData* bd = (BackendData*)Marshal.AllocHGlobal(sizeof(BackendData));
+
+            // BackendData backend = new BackendData();
+            // *bd = backend;
+
+            // io.BackendPlatformUserData = (IntPtr)bd;
+            // io.NativePtr->BackendPlatformName = (byte*)Unsafe.AsPointer(ref MemoryMarshal.GetReference("opentk_impl_opentk4"u8));
+
+            // bd->Context = ImGui.GetCurrentContext();
+            // bd->WindowPtr = Application.NativeWindow;
+            // bd->WantUpdateMonitors = false;
+
+            // var platformIO = ImGui.GetPlatformIO();
+            // platformIO.NativePtr->Platform_SetClipboardTextFn = (IntPtr)(delegate* unmanaged[Cdecl]<nint, nint, void>)(&SetClipboardText);
+            // platformIO.NativePtr->Platform_GetClipboardTextFn = (IntPtr)(delegate* unmanaged[Cdecl]<nint, nint>)(&GetClipboardText);
+
+            // platformIO.NativePtr->Monitors = default;
+
+
             io.Fonts.AddFontDefault();
 
             unsafe
@@ -79,7 +133,7 @@ namespace MiniAudioPlayer.Graphics
             }
 
             io.BackendFlags |= ImGuiBackendFlags.RendererHasVtxOffset;
-            io.ConfigFlags |= ImGuiConfigFlags.DockingEnable; 
+            io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
             CreateDeviceResources();
 
@@ -266,6 +320,12 @@ void main()
             io.DisplayFramebufferScale = _scaleFactor;
             io.DeltaTime = deltaSeconds; // DeltaTime is in seconds.
         }
+
+        [DllImport("glfw3", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        internal static extern void glfwSetClipboardString(IntPtr window, IntPtr str);
+
+        [DllImport("glfw3", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
+        internal static extern IntPtr glfwGetClipboardString(IntPtr window);
 
         readonly List<char> PressedChars = new List<char>();
 

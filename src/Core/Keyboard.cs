@@ -133,10 +133,15 @@ namespace MiniAudioPlayer.Core
         Keypad8 = GLFW.KEY_KP_8,
         Keypad9 = GLFW.KEY_KP_9,
         Decimal = GLFW.KEY_KP_DECIMAL,
+        KeypadDecimal = GLFW.KEY_KP_DECIMAL,
         Divide = GLFW.KEY_KP_DIVIDE,
+        KeypadDivide = GLFW.KEY_KP_DIVIDE,
         Multiply = GLFW.KEY_KP_MULTIPLY,
+        KeypadMultiply = GLFW.KEY_KP_MULTIPLY,
         Subtract = GLFW.KEY_KP_SUBTRACT,
+        KeypadSubtract = GLFW.KEY_KP_SUBTRACT,
         Add = GLFW.KEY_KP_ADD,
+        KeypadAdd = GLFW.KEY_KP_ADD,
         KeypadEnter = GLFW.KEY_KP_ENTER,
         KeypadEqual = GLFW.KEY_KP_EQUAL,
         LeftShift = GLFW.KEY_LEFT_SHIFT,
@@ -147,7 +152,7 @@ namespace MiniAudioPlayer.Core
         RightControl = GLFW.KEY_RIGHT_CONTROL,
         RightAlt = GLFW.KEY_RIGHT_ALT,
         RightSuper = GLFW.KEY_RIGHT_SUPER,
-        Menu = GLFW.KEY_MENU
+        Menu = GLFW.KEY_MENU,
     }
 
     public sealed class KeyState 

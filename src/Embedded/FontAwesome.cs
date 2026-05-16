@@ -7,7 +7,7 @@ namespace MiniAudioPlayer.Embedded
         public const ushort ICON_MIN_FA = 0xe005;
         public const ushort ICON_MAX_16_FA = 0xf8ff;
         public const ushort ICON_MAX_FA = 0xf8ff;
-        		public const string ICON_FA_0 = "\u0030";
+		public const string ICON_FA_0 = "\u0030";
 		public const string ICON_FA_1 = "\u0031";
 		public const string ICON_FA_2 = "\u0032";
 		public const string ICON_FA_3 = "\u0033";

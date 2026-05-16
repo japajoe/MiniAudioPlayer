@@ -42,7 +42,9 @@ namespace MiniAudioPlayer
         private ma_sound_end_proc soundEndProc;
         private UInt32 sampleRate;
         private UInt32 channels;
+        private float volume = 1.0f;
         private bool soundIsPaused;
+        private bool soundIsLooping;
         private int currentTrackIndex;
         private float currentLengthSeconds;
         private UInt64 currentLengthInPCMFrames;
@@ -52,6 +54,7 @@ namespace MiniAudioPlayer
         public UInt32 SampleRate => sampleRate;
         public UInt32 Channels => channels;
         public RingBuffer OutputBuffer => ringBuffer;
+
         public bool IsPlaying
         {
             get
@@ -59,6 +62,36 @@ namespace MiniAudioPlayer
                 if(pSound.Get()->pDataSource.pointer == IntPtr.Zero)
                     return false;
                 return ma_sound_is_playing(pSound) > 0;
+            }
+        }
+
+        public bool IsLooping
+        {
+            get => soundIsLooping;
+            set
+            {
+                soundIsLooping = value;
+                if(IsPlaying)
+                {
+                    ma_sound_set_looping(pSound, soundIsLooping ? (uint)1 : 0);
+                }
+            }
+        }
+
+        public float Volume
+        {
+            get => volume;
+            set
+            {
+                volume = value;
+                if(volume < 0.0f)
+                    volume = 0.0f;
+                if(volume > 1.0f)
+                    volume = 1.0f;
+                if(IsPlaying)
+                {
+                    ma_sound_set_volume(pSound, volume);
+                }
             }
         }
 
@@ -246,6 +279,8 @@ namespace MiniAudioPlayer
 
             if(soundIsPaused && currentTrackIndex == index)
             {
+                ma_sound_set_looping(pSound, soundIsLooping ? (uint)1 : 0);
+                ma_sound_set_volume(pSound, volume);
                 ma_sound_start(pSound);
                 return;
             }
@@ -271,6 +306,8 @@ namespace MiniAudioPlayer
                 }
 
                 ma_sound_set_end_callback(pSound, soundEndProc, IntPtr.Zero);
+                ma_sound_set_looping(pSound, soundIsLooping ? (uint)1 : 0);
+                ma_sound_set_volume(pSound, volume);
 
                 if(ma_sound_start(pSound) == ma_result.success)
                 {

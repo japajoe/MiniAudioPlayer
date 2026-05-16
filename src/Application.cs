@@ -47,9 +47,12 @@ namespace MiniAudioPlayer
         private bool isDraggingSlider;
         private string shaderError = string.Empty;
         private string currentShaderPath;
+        private bool repeatAudio;
         private DirectoryStorage directoryStorage;
         private readonly char[] currentTimeBuffer = new char[12];
         private readonly char[] totalTimeBuffer = new char[12];
+
+        private IconViewer iconViewer = new IconViewer();
 
         public Application() : base() {}
         
@@ -58,6 +61,8 @@ namespace MiniAudioPlayer
 
         protected override void OnInitialize()
         {
+            window.MinimumSize = new Vector2i(512, 512);
+
             ImGuiStyle.UseCatppuccinMochaStyle();
 
             audioPlayer = new AudioPlayer();
@@ -170,8 +175,11 @@ namespace MiniAudioPlayer
                                 trackIndex = 0;
                             if (trackIndex >= 0 && trackIndex < audioPlayer.TrackCount)
                             {
-                                selectedTrackIndex = trackIndex;
-                                audioPlayer.PlayNext();
+                                if(!audioPlayer.IsLooping)
+                                {
+                                    selectedTrackIndex = trackIndex;
+                                    audioPlayer.PlayNext();
+                                }
                             }
                             break;
                         default:
@@ -214,6 +222,8 @@ namespace MiniAudioPlayer
             ImGui.DockSpaceOverViewport();
 
             //ImGui.ShowMetricsWindow();
+
+            //iconViewer.Draw();
 
             ShowMenu();
             ShowVisualizer();
@@ -360,14 +370,20 @@ private void ShowMenu()
             ImGui.PopItemWidth();
             ImGui.SameLine();
 
-            ImGui.Text(totalTimeText);
+            float totalTimePositionX = ImGui.GetCursorPosX();
 
+            ImGui.Text(totalTimeText);
 
             float styleItemSpacingX = ImGui.GetStyle().ItemSpacing.X;
             float buttonPlayPauseWidth = ImGui.CalcTextSize(audioPlayer.IsPlaying ? FontAwesome.ICON_FA_PAUSE : FontAwesome.ICON_FA_PLAY).X + (ImGui.GetStyle().FramePadding.X * 2.0f);
             float buttonStopWidth = ImGui.CalcTextSize(FontAwesome.ICON_FA_STOP).X + (ImGui.GetStyle().FramePadding.X * 2.0f);
+            float buttonLoopWidth = ImGui.CalcTextSize(FontAwesome.ICON_FA_REPEAT).X + (ImGui.GetStyle().FramePadding.X * 2.0f);
 
-            float totalGroupWidth = buttonPlayPauseWidth + styleItemSpacingX + buttonStopWidth;
+            float totalGroupWidth = buttonPlayPauseWidth + 
+                                    styleItemSpacingX + 
+                                    buttonStopWidth +
+                                    styleItemSpacingX +
+                                    buttonLoopWidth;
 
             float startPosX = (ImGui.GetContentRegionAvail().X - totalGroupWidth) * 0.5f;
 
@@ -396,6 +412,37 @@ private void ShowMenu()
             if(ImGui.Button(FontAwesome.ICON_FA_STOP))
             {
                 audioPlayer.Stop();
+            }
+
+            ImGui.SameLine();
+
+            if(repeatAudio)
+            {
+                ImGuiStylePtr style = ImGui.GetStyle();
+                ImGui.PushStyleColor(ImGuiCol.Button,  style.Colors[(int)ImGuiCol.ButtonActive]);
+            }
+
+            bool repeat = repeatAudio;
+
+            if(ImGui.Button(FontAwesome.ICON_FA_REPEAT))
+            {
+                repeatAudio = !repeatAudio;
+                audioPlayer.IsLooping = repeatAudio;
+            }
+
+            if(repeat)
+                ImGui.PopStyleColor(1);
+
+            ImGui.SameLine();
+
+            ImGui.SetNextItemWidth(75);
+            ImGui.SetCursorPosX(totalTimePositionX);
+
+            float volume = audioPlayer.Volume;
+
+            if(ImGui.SliderFloat("##Volume", ref volume, 0.0f, 1.0f, ""))
+            {
+                audioPlayer.Volume = volume;
             }
 
             ImGui.End();

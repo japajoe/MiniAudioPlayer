@@ -103,7 +103,6 @@ namespace MiniAudioPlayer.Graphics
                 for (int i = 0; i < n; i++)
                 {
                     string extension = GL.GetStringi(StringName.Extensions, (uint)i);
-
                     if (extension == name) return true;
                 }
 
@@ -146,7 +145,7 @@ namespace MiniAudioPlayer.Graphics
             RendererData* bd = GetBackendData();
 
             GL.Enable(EnableCap.Blend);
-            GL.BlendEquation(BlendEquationModeEXT.FuncAdd);
+            GL.BlendEquation(BlendEquationMode.FuncAdd);
             GL.BlendFuncSeparate(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha, BlendingFactor.One, BlendingFactor.OneMinusSrcAlpha);
             GL.Disable(EnableCap.CullFace);
             GL.Disable(EnableCap.DepthTest);
@@ -159,12 +158,14 @@ namespace MiniAudioPlayer.Graphics
 
             bool clip_origin_lower_left = true;
 
-            bool has_clip_control = GL.GetString(StringName.Extensions).Contains("GL_ARB_clip_control");
-            int major = 0;
-            int minor = 0;
+            string extensions = GL.GetString(StringName.Extensions);
+            bool has_clip_control = false;
+
+            if(!string.IsNullOrEmpty(extensions))
+                has_clip_control = extensions.Contains("GL_ARB_clip_control");
             
-            GL.GetInteger(GetPName.MajorVersion, ref major);
-            GL.GetInteger(GetPName.MinorVersion, ref minor);
+            GL.GetInteger(GetPName.MajorVersion, out int major);
+            GL.GetInteger(GetPName.MinorVersion, out int minor);
 
             if (major > 4 || (major == 4 && minor >= 5) || has_clip_control)
             {
@@ -178,11 +179,6 @@ namespace MiniAudioPlayer.Graphics
                 }
             }
 
-            // bool clip_origin_lower_left = true;
-            // ClipOrigin clip_origin = (ClipOrigin)GL.GetInteger(GetPName.ClipOrigin);
-            // if (clip_origin == ClipOrigin.UpperLeft)
-            //     clip_origin_lower_left = false;
-
             GL.Viewport(0, 0, fbWidth, fbHeight);
             float L = drawData.DisplayPos.X;
             float R = drawData.DisplayPos.X + drawData.DisplaySize.X;
@@ -193,13 +189,13 @@ namespace MiniAudioPlayer.Graphics
             Matrix4 mvp = Matrix4.CreateOrthographicOffCenter(L, R, B, T, -1, 1);
             GL.UseProgram(bd->ShaderHandle);
             GL.Uniform1i(bd->UniformLocationTex, 0);
-            GL.UniformMatrix4f(bd->UniformLocationProjMtx, 1, true, mvp);
+            GL.UniformMatrix4f(bd->UniformLocationProjMtx, 1, true, in mvp);
 
             GL.BindSampler(0, 0);
 
             GL.BindVertexArray(vao);
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, bd->VboHandle);
-            GL.BindBuffer(BufferTargetARB.ElementArrayBuffer, bd->EboHandle);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, bd->VboHandle);
+            GL.BindBuffer(BufferTarget.ElementArrayBuffer, bd->EboHandle);
             GL.EnableVertexAttribArray((uint)bd->AttribLocationVtxPos);
             GL.EnableVertexAttribArray((uint)bd->AttribLocationVtxUV);
             GL.EnableVertexAttribArray((uint)bd->AttribLocationVtxColor);
@@ -209,7 +205,7 @@ namespace MiniAudioPlayer.Graphics
 
             if (bd->KHRDebugAvailable)
             {
-                GL.ObjectLabel(ObjectIdentifier.Buffer, (uint)vao, -1, "OpenTK_ImGui: VAO");
+                GL.ObjectLabel(ObjectIdentifier.VertexArray, (uint)vao, -1, "OpenTK_ImGui: VAO");
             }
         }
 
@@ -223,17 +219,17 @@ namespace MiniAudioPlayer.Graphics
             int last_active_texture = GL.GetInteger(GetPName.ActiveTexture);
             GL.ActiveTexture(TextureUnit.Texture0);
             int last_program = GL.GetInteger(GetPName.CurrentProgram);
-            int last_texture = GL.GetInteger(GetPName.TextureBinding2d);
+            int last_texture = GL.GetInteger(GetPName.TextureBinding2D);
             int last_sampler = GL.GetInteger(GetPName.SamplerBinding);
             int last_array_buffer = GL.GetInteger(GetPName.ArrayBufferBinding);
             int last_vao = GL.GetInteger(GetPName.VertexArrayBinding);
             // OpenGL 3.0 & 3.1 have separate polygon modes for front and back.
             Span<int> last_polygon_mode = stackalloc int[2];
-            GL.GetInteger(GetPName.PolygonMode, ref last_polygon_mode[0]);
+            GL.GetInteger(GetPName.PolygonMode, out last_polygon_mode[0]);
             Span<int> last_viewport = stackalloc int[4];
-            GL.GetInteger(GetPName.Viewport, ref last_viewport[0]);
+            GL.GetInteger(GetPName.Viewport, out last_viewport[0]);
             Span<int> last_scissor_box = stackalloc int[4];
-            GL.GetInteger(GetPName.ScissorBox, ref last_scissor_box[0]);
+            GL.GetInteger(GetPName.ScissorBox, out last_scissor_box[0]);
             int last_blend_src_rgb = GL.GetInteger(GetPName.BlendSrcRgb);
             int last_blend_dst_rgb = GL.GetInteger(GetPName.BlendDstRgb);
             int last_blend_src_alpha = GL.GetInteger(GetPName.BlendSrcAlpha);
@@ -259,8 +255,8 @@ namespace MiniAudioPlayer.Graphics
 
                 nint vtx_buffer_size = drawList.VtxBuffer.Size * (int)sizeof(ImDrawVert);
                 nint idx_buffer_size = drawList.IdxBuffer.Size * (int)sizeof(ushort);
-                GL.BufferData(BufferTargetARB.ArrayBuffer, vtx_buffer_size, drawList.VtxBuffer.Data, BufferUsageARB.StreamDraw);
-                GL.BufferData(BufferTargetARB.ElementArrayBuffer, idx_buffer_size, drawList.IdxBuffer.Data, BufferUsageARB.StreamDraw);
+                GL.BufferData(BufferTarget.ArrayBuffer, vtx_buffer_size, drawList.VtxBuffer.Data, BufferUsage.StreamDraw);
+                GL.BufferData(BufferTarget.ElementArrayBuffer, idx_buffer_size, drawList.IdxBuffer.Data, BufferUsage.StreamDraw);
 
                 for (int cmd_i = 0; cmd_i < drawList.CmdBuffer.Size; cmd_i++)
                 {
@@ -289,7 +285,7 @@ namespace MiniAudioPlayer.Graphics
 
                         GL.Scissor((int)clip_min.X, (int)((float)fbHeight - clip_max.Y), (int)(clip_max.X - clip_min.X), (int)(clip_max.Y - clip_min.Y));
 
-                        GL.BindTexture(TextureTarget.Texture2d, (int)cmdPtr.GetTexID());
+                        GL.BindTexture(TextureTarget.Texture2D, (int)cmdPtr.GetTexID());
                         
                         GL.DrawElementsBaseVertex(PrimitiveType.Triangles, (int)cmd.ElemCount, DrawElementsType.UnsignedShort, (int)(cmd.IdxOffset * sizeof(ushort)), (int)cmd.VtxOffset);
                     }
@@ -299,12 +295,12 @@ namespace MiniAudioPlayer.Graphics
             GL.DeleteVertexArray(vao);
 
             if (last_program == 0 || GL.IsProgram(last_program)) GL.UseProgram(last_program);
-            GL.BindTexture(TextureTarget.Texture2d, last_texture);
+            GL.BindTexture(TextureTarget.Texture2D, last_texture);
             GL.BindSampler(0, last_sampler);
             GL.ActiveTexture((TextureUnit)last_active_texture);
             GL.BindVertexArray(last_vao);
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, last_array_buffer);
-            GL.BlendEquationSeparate((BlendEquationModeEXT)last_blend_equation_rgb, (BlendEquationModeEXT)last_blend_equation_alpha);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, last_array_buffer);
+            GL.BlendEquationSeparate((BlendEquationMode)last_blend_equation_rgb, (BlendEquationMode)last_blend_equation_alpha);
             GL.BlendFuncSeparate((BlendingFactor)last_blend_src_rgb, (BlendingFactor)last_blend_dst_rgb, (BlendingFactor)last_blend_src_alpha, (BlendingFactor)last_blend_dst_alpha);
             if (last_enable_blend) GL.Enable(EnableCap.Blend); else GL.Disable(EnableCap.Blend);
             if (last_enable_cull_face) GL.Enable(EnableCap.CullFace); else GL.Disable(EnableCap.CullFace);
@@ -340,19 +336,19 @@ namespace MiniAudioPlayer.Graphics
             //io.Fonts.AddFontDefault();
             io.Fonts.GetTexDataAsRGBA32(out byte* pixels, out int width, out int height);
 
-            int last_texture = GL.GetInteger(GetPName.TextureBinding2d);
+            int last_texture = GL.GetInteger(GetPName.TextureBinding2D);
             bd->FontTexture = GL.GenTexture();
-            GL.BindTexture(TextureTarget.Texture2d, bd->FontTexture);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+            GL.BindTexture(TextureTarget.Texture2D, bd->FontTexture);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
             GL.PixelStorei(PixelStoreParameter.UnpackRowLength, 0);
-            GL.TexImage2D(TextureTarget.Texture2d, 0, InternalFormat.Rgba, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (IntPtr)pixels);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, InternalFormat.Rgba, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, (IntPtr)pixels);
 
             io.Fonts.SetTexID(bd->FontTexture);
 
-            GL.BindTexture(TextureTarget.Texture2d, last_texture);
+            GL.BindTexture(TextureTarget.Texture2D, last_texture);
 
             if (bd->KHRDebugAvailable)
             {
@@ -375,10 +371,8 @@ namespace MiniAudioPlayer.Graphics
 
         static bool CheckShader(int handle, string desc)
         {
-            int status = 0;
-            int logLength = 0;
-            GL.GetShaderi(handle, ShaderParameterName.CompileStatus, ref status);
-            GL.GetShaderi(handle, ShaderParameterName.InfoLogLength, ref logLength);
+            GL.GetShaderi(handle, ShaderParameterName.CompileStatus, out int status);
+            GL.GetShaderi(handle, ShaderParameterName.InfoLogLength, out int logLength);
             if (status == 0)
             {
                 Console.Error.WriteLine($"ERROR: ImguiImplOpenGL3.CheckShader: Failed to compile {desc}!");
@@ -393,11 +387,8 @@ namespace MiniAudioPlayer.Graphics
 
         static bool CheckProgram(int handle, string desc)
         {
-            int status = 0;
-            int logLength = 0;
-
-            GL.GetProgrami(handle, ProgramPropertyARB.LinkStatus, ref status);
-            GL.GetProgrami(handle, ProgramPropertyARB.InfoLogLength, ref logLength);
+            GL.GetProgrami(handle, ProgramProperty.LinkStatus, out int status);
+            GL.GetProgrami(handle, ProgramProperty.InfoLogLength, out int logLength);
             if (status == 0)
             {
                 Console.Error.WriteLine($"ERROR: ImguiImplOpenGL3.CheckProgram: Failed to link {desc}!");
@@ -414,10 +405,10 @@ namespace MiniAudioPlayer.Graphics
         {
             RendererData* bd = GetBackendData();
 
-            int last_texture = GL.GetInteger(GetPName.TextureBinding2d);
+            int last_texture = GL.GetInteger(GetPName.TextureBinding2D);
             int last_array_buffer = GL.GetInteger(GetPName.ArrayBufferBinding);
             int last_pixel_unpack_buffer = GL.GetInteger(GetPName.PixelUnpackBufferBinding);
-            int last_vertex_array = GL.GetInteger(GetPName.VertexArrayBinding);
+            int last_vertex_array = GL.GetInteger(GetPName.VertexArray);
 
             string vertex_shader_glsl_120 =
                 """
@@ -595,16 +586,16 @@ namespace MiniAudioPlayer.Graphics
 
             CreateFontsTexture();
 
-            GL.BindTexture(TextureTarget.Texture2d, last_texture);
-            GL.BindBuffer(BufferTargetARB.ArrayBuffer, last_array_buffer);
-            GL.BindBuffer(BufferTargetARB.PixelUnpackBuffer, last_pixel_unpack_buffer);
+            GL.BindTexture(TextureTarget.Texture2D, last_texture);
+            GL.BindBuffer(BufferTarget.ArrayBuffer, last_array_buffer);
+            GL.BindBuffer(BufferTarget.PixelUnpackBuffer, last_pixel_unpack_buffer);
             GL.BindVertexArray(last_vertex_array);
 
             if (bd->KHRDebugAvailable)
             {
-                GL.ObjectLabel(ObjectIdentifier.Buffer,(uint)bd->VboHandle, -1, "OpenTK_ImGui: VBO");
-                GL.ObjectLabel(ObjectIdentifier.Buffer,(uint)bd->EboHandle, -1, "OpenTK_ImGui: EBO");
-                GL.ObjectLabel(ObjectIdentifier.Shader,(uint)bd->ShaderHandle, -1, "OpenTK_ImGui: Shader");
+                GL.ObjectLabel(ObjectIdentifier.Buffer, (uint)bd->VboHandle, -1, "OpenTK_ImGui: VBO");
+                GL.ObjectLabel(ObjectIdentifier.Buffer, (uint)bd->EboHandle, -1, "OpenTK_ImGui: EBO");
+                GL.ObjectLabel(ObjectIdentifier.Shader, (uint)bd->ShaderHandle, -1, "OpenTK_ImGui: Shader");
             }
         }
 

@@ -22,21 +22,21 @@ namespace MiniAudioPlayer.Graphics
             
             id = GL.GenTexture();
 
-            GL.BindTexture(TextureTarget.Texture2d, id);
+            GL.BindTexture(TextureTarget.Texture2D, id);
 
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, (int)settings.wrapS);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, (int)settings.wrapT);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, (int)settings.minFilter);
-            GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, (int)settings.magFilter);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)settings.wrapS);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)settings.wrapT);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)settings.minFilter);
+            GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)settings.magFilter);
 
             if(!generateMipmaps)
             {
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureBaseLevel, 0);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMaxLevel, 0);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureBaseLevel, 0);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, 0);
             }
 
-            GL.TexImage2D(TextureTarget.Texture2d, 0, internalFormat, width, height, 0, pixelFormat, pixelType, IntPtr.Zero);
-            GL.BindTexture(TextureTarget.Texture2d, 0);
+            GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, width, height, 0, pixelFormat, pixelType, IntPtr.Zero);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
         }
 
         public void Delete()
@@ -47,27 +47,27 @@ namespace MiniAudioPlayer.Graphics
 
         public void Bind()
         {
-            GL.BindTexture(TextureTarget.Texture2d, id);
+            GL.BindTexture(TextureTarget.Texture2D, id);
         }
 
         public void Unbind()
         {
-            GL.BindTexture(TextureTarget.Texture2d, 0);
+            GL.BindTexture(TextureTarget.Texture2D, 0);
         }
 
         public void SubImage2D(int xoffset, int yoffset, int width, int height, PixelFormat format, PixelType type, ReadOnlySpan<float> pixels)
         {
-            GL.TexSubImage2D(TextureTarget.Texture2d, 0, xoffset, yoffset, width, height, format, type, pixels);
+            GL.TexSubImage2D(TextureTarget.Texture2D, 0, xoffset, yoffset, width, height, format, type, pixels);
         }
 
         public void SubImage2D(int xoffset, int yoffset, int width, int height, PixelFormat format, PixelType type, ReadOnlySpan<byte> pixels)
         {
-            GL.TexSubImage2D(TextureTarget.Texture2d, 0, xoffset, yoffset, width, height, format, type, pixels);
+            GL.TexSubImage2D(TextureTarget.Texture2D, 0, xoffset, yoffset, width, height, format, type, pixels);
         }
 
         public void SubImage2D(int xoffset, int yoffset, int width, int height, PixelFormat format, PixelType type, ReadOnlySpan<Vector3> pixels)
         {
-            GL.TexSubImage2D(TextureTarget.Texture2d, 0, xoffset, yoffset, width, height, format, type, pixels);
+            GL.TexSubImage2D(TextureTarget.Texture2D, 0, xoffset, yoffset, width, height, format, type, pixels);
         }
     }
 }

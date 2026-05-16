@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using MiniAudioPlayer.Core;
-using MiniAudioPlayer.Utilities;
-using ImGuiNET;
-using TinyFileDialogs;
-using MiniAudioPlayer.Graphics;
-using OpenTK.Graphics.OpenGL;
-using MiniAudioPlayer.Embedded;
 using System.IO;
+using System.Threading;
+using ImGuiNET;
+using MiniAudioPlayer.Core;
+using MiniAudioPlayer.Embedded;
+using MiniAudioPlayer.Graphics;
+using MiniAudioPlayer.Utilities;
+using OpenTK.Graphics.OpenGL;
 using OpenTK.Mathematics;
+using TinyFileDialogs;
 
 namespace MiniAudioPlayer
 {
-    public class App : Application
+    public class Application : ApplicationBase
     {
         private struct ConcurrentEvent
         {
@@ -45,18 +45,18 @@ namespace MiniAudioPlayer
         private Vector3[] textureData;
         private float seekPreviewValue;
         private bool isDraggingSlider;
-        private string shaderError = "Hello world";
+        private string shaderError = string.Empty;
         private string currentShaderPath;
+        private DirectoryStorage directoryStorage;
         private readonly char[] currentTimeBuffer = new char[12];
         private readonly char[] totalTimeBuffer = new char[12];
 
-        public App(int width, int height, string title, WindowFlags flags = WindowFlags.VSync)
-            : base(width, height, title, flags)
-        {
+        public Application() : base() {}
+        
+        public Application(int width, int height, int glMajor, int glMinor, bool vsync, string title)
+            : base(width, height, glMajor, glMinor, vsync, title) {}
 
-        }
-
-        protected override void OnLoad()
+        protected override void OnInitialize()
         {
             ImGuiStyle.UseCatppuccinMochaStyle();
 
@@ -84,15 +84,31 @@ namespace MiniAudioPlayer
 
             SetLayout();
 
-            audioPlayer.AddTracks("/home/wesley/Desktop/FLProjects/best beats/");
+            directoryStorage = new DirectoryStorage();
+
+            if(File.Exists("settings.dat"))
+            {
+                if(!directoryStorage.Deserialize("settings.dat"))
+                {
+                    directoryStorage.LastShaderDirectory = "./";
+                    directoryStorage.LastAudioDirectory = "./";
+                }
+            }
+            else
+            {
+                directoryStorage.LastShaderDirectory = "./";
+                directoryStorage.LastAudioDirectory = "./";
+                directoryStorage.Serialize("settings.dat");
+            }
         }
 
-        protected override void OnClose()
+        protected override void OnDestroy()
         {
             audioPlayer.Dispose();
+            directoryStorage.Serialize("settings.dat");
         }
 
-        protected override void OnUpdate()
+        protected override void OnNewFrame()
         {
             if (eventQueue.Count > 0)
             {
@@ -111,10 +127,16 @@ namespace MiniAudioPlayer
                                 {
                                     string[] fileList = files.Split('|');
                                     for (int i = 0; i < fileList.Length; i++)
+                                    {
                                         audioPlayer.AddTrack(fileList[i]);
+                                    }
+                                    
+                                    string filePath = fileList[0];
+                                    directoryStorage.LastAudioDirectory = Path.GetDirectoryName(filePath);
                                 }
                                 else
                                 {
+                                    directoryStorage.LastAudioDirectory = Path.GetDirectoryName(files);
                                     audioPlayer.AddTrack(files);
                                 }
                             }
@@ -124,6 +146,7 @@ namespace MiniAudioPlayer
                         case ConcurrentEvent.Type.SelectFolder:
                             string directory = NativeString.Get(e.data);
                             NativeString.Free(e.data);
+                            directoryStorage.LastAudioDirectory = directory;
                             audioPlayer.AddTracks(directory);
                             SetInputEnabled(true);
                             break;
@@ -134,6 +157,7 @@ namespace MiniAudioPlayer
                             {
                                 if(File.Exists(shaderPath))
                                 {
+                                    directoryStorage.LastShaderDirectory = Path.GetDirectoryName(shaderPath);
                                     SetShader(shaderPath);
                                 }
                             }
@@ -180,6 +204,10 @@ namespace MiniAudioPlayer
             }
         }
 
+        protected override void OnRenderFrame()
+        {
+        }
+
         protected override void OnGUI()
         {
             visualizer.Render();
@@ -194,7 +222,7 @@ namespace MiniAudioPlayer
             ShowPlayBar();
         }
 
-        private void ShowMenu()
+private void ShowMenu()
         {
             if (ImGui.BeginMainMenuBar())
             {
@@ -223,7 +251,7 @@ namespace MiniAudioPlayer
                     }
                     if (ImGui.MenuItem("Exit"))
                     {
-                        Application.Quit();
+                        window.Close();
                     }
                     ImGui.EndMenu();
                 }
@@ -392,8 +420,7 @@ namespace MiniAudioPlayer
             size.X -= 5;
             size.Y -= 5;
 
-            //ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size, ImGuiInputTextFlags.ReadOnly);
-            ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size);
+            ImGui.InputTextMultiline("##Log", ref shaderError, 1024, size, ImGuiInputTextFlags.ReadOnly);
             ImGui.End();
         }
 
@@ -415,7 +442,7 @@ namespace MiniAudioPlayer
 
         private void ShowFolderChooserDialog()
         {
-            string directory = TinyFileDialog.SelectFolderDialog("Select Folder", "/home/wesley/Desktop/FLProjects/");
+            string directory = TinyFileDialog.SelectFolderDialog("Select Folder", directoryStorage.LastAudioDirectory);
             ConcurrentEvent e = new ConcurrentEvent(ConcurrentEvent.Type.SelectFolder, NativeString.Allocate(directory));
             eventQueue.Enqueue(e);
         }
@@ -429,7 +456,7 @@ namespace MiniAudioPlayer
                 "*.wav",
             };
 
-            string files = TinyFileDialog.OpenFileDialog("Select Files", "/home/wesley/Desktop/FLProjects/", filter, "Audio Files", true);
+            string files = TinyFileDialog.OpenFileDialog("Select Files", directoryStorage.LastAudioDirectory, filter, "Audio Files", true);
             ConcurrentEvent e = new ConcurrentEvent(ConcurrentEvent.Type.SelectFiles, NativeString.Allocate(files));
             eventQueue.Enqueue(e);
         }
@@ -442,7 +469,7 @@ namespace MiniAudioPlayer
                 "*.c"
             };
 
-            string file = TinyFileDialog.OpenFileDialog("Select Shader", "/home/wesley/Documents/development/dotnet/audio/MiniAudioPlayer/shaders/", filter, "Shader Files", false);
+            string file = TinyFileDialog.OpenFileDialog("Select Shader", directoryStorage.LastShaderDirectory, filter, "Shader Files", false);
             ConcurrentEvent e = new ConcurrentEvent(ConcurrentEvent.Type.LoadShader, NativeString.Allocate(file));
             eventQueue.Enqueue(e);
         }
@@ -536,8 +563,6 @@ namespace MiniAudioPlayer
             }
         }
 
-        private bool firstCompile = true;
-
         private void SetShader(string shaderPath)
         {
             if(string.IsNullOrEmpty(shaderPath))
@@ -549,12 +574,6 @@ namespace MiniAudioPlayer
             if(shader.Generate(BasicShader.VertexSource, fragmentSource, out shaderError))
             {
                 visualizer.SetShader(shader);
-            }
-
-            if(firstCompile)
-            {
-                shaderError = "Test this stuff\n" + shaderError;
-                firstCompile = false;
             }
         }
 

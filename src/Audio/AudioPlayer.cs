@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Security.Principal;
 using MiniAudioEx.Native;
 using MiniAudioPlayer.Utilities;
 using static MiniAudioEx.Native.MiniAudioNative;

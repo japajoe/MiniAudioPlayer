@@ -102,7 +102,7 @@ namespace MiniAudioPlayer
             shader.Use();
 
             GL.ActiveTexture(TextureUnit.Texture0); 
-            GL.BindTexture(TextureTarget.Texture2d, pingpongBuffer.src.GetColorAttachment(0));
+            GL.BindTexture(TextureTarget.Texture2D, pingpongBuffer.src.GetColorAttachment(0));
             shader.SetInt("uTexture", 0);
 
             for(int i = 0; i < textures.Count; i++)

@@ -1,13 +1,13 @@
-using MiniAudioPlayer.Core;
-
-namespace MiniAudioPlayer
+﻿namespace MiniAudioPlayer
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            App application = new App(800, 600, "MiniAudioPlayer", WindowFlags.VSync);
-            application.Run();
+            using(var application = new Application(800, 600, 3, 3, true, "MiniAudioPlayer"))
+            {
+                application.Run();
+            }
         }
     }
 }

@@ -20,6 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using MiniAudioPlayer.Core;
 using OpenTK.Graphics.OpenGL;
 
 namespace MiniAudioPlayer.Graphics
@@ -31,17 +32,15 @@ namespace MiniAudioPlayer.Graphics
         private static bool screenResized;
         private static ImGuiController imGuiController;
 
-        internal static void Initialize(int width, int height)
+        internal static void Initialize(Window window)
         {
-            screenWidth = width;
-            screenHeight = height;
+            screenWidth = window.FramebufferSize.X;
+            screenHeight =  window.FramebufferSize.Y;
             screenResized = false;
 
-            OpenGL.Initialize();
+            imGuiController = new ImGuiController(window);
 
-            imGuiController = new ImGuiController();
-
-            GL.Viewport(0, 0, width, height);
+            GL.Viewport(0, 0, screenWidth, screenHeight);
         }
 
         internal static void Destroy()
@@ -53,9 +52,8 @@ namespace MiniAudioPlayer.Graphics
         {
             InvalidateFrameBuffers();
 
-            GL.ClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
             GL.Clear(ClearBufferMask.DepthBufferBit | ClearBufferMask.ColorBufferBit);
-
         }
 
         internal static void BeginGUI()
@@ -78,14 +76,12 @@ namespace MiniAudioPlayer.Graphics
             }
         }
 
-        internal static void InvalidateFrameBuffers()
+        private static void InvalidateFrameBuffers()
         {
             if(!screenResized)
                 return;
 
             GL.Viewport(0, 0, screenWidth, screenHeight);
-
-            imGuiController.InvalidateDeviceObjects();
 
             screenResized = false;
         }

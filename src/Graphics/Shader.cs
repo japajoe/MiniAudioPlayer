@@ -45,7 +45,7 @@ namespace MiniAudioPlayer
 
                 bool failed = true;
 
-                if(GL.GetProgrami(id, ProgramPropertyARB.LinkStatus) == 0)
+                if(GL.GetProgrami(id, ProgramProperty.LinkStatus) == 0)
                 {
                     GL.GetProgramInfoLog(id, out error);
                     Console.WriteLine(error);

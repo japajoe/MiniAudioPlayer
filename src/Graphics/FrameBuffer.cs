@@ -336,7 +336,7 @@ namespace MiniAudioPlayer
                     DrawBufferMode.ColorAttachment3 
                 };
                 
-                GL.DrawBuffers(buffers);
+                GL.DrawBuffers(buffers.Length, buffers);
             }
             else
             {
@@ -364,7 +364,7 @@ namespace MiniAudioPlayer
 
         private static TextureTarget GetTextureTarget(bool multiSampled)
         {
-            return multiSampled ? TextureTarget.Texture2dMultisample : TextureTarget.Texture2d;
+            return multiSampled ? TextureTarget.Texture2DMultisample : TextureTarget.Texture2D;
         }
 
         private static int GetFilterMode(TextureFilterMode filterMode)
@@ -404,7 +404,7 @@ namespace MiniAudioPlayer
         private static void CreateTextures(bool multiSampled, List<int> textures)
         {
             var span = CollectionsMarshal.AsSpan(textures);
-            GL.GenTextures(span);
+            GL.GenTextures(textures.Count, span);
         }
 
         private static void CreateTexture(bool multiSampled, ref int texture)
@@ -423,16 +423,16 @@ namespace MiniAudioPlayer
 
             if(multiSampled)
             {
-                GL.TexImage2DMultisample(TextureTarget.Texture2dMultisample, samples, internalFormat, width, height, false);
+                GL.TexImage2DMultisample(TextureTarget.Texture2DMultisample, samples, internalFormat, width, height, false);
             }
             else
             {
-                GL.TexImage2D(TextureTarget.Texture2d, 0, internalFormat, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, filterMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, filterMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapR, wrapMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, wrapMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, wrapMode);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, width, height, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, filterMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, filterMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapR, wrapMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, wrapMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, wrapMode);
             }
 
             FramebufferAttachment att = (FramebufferAttachment)((int)FramebufferAttachment.ColorAttachment0 + index);
@@ -445,7 +445,7 @@ namespace MiniAudioPlayer
 
             if(multiSampled)
             {
-                GL.TexImage2DMultisample(TextureTarget.Texture2dMultisample, samples, internalFormat, width, height, false);
+                GL.TexImage2DMultisample(TextureTarget.Texture2DMultisample, samples, internalFormat, width, height, false);
             }
             else
             {
@@ -461,12 +461,12 @@ namespace MiniAudioPlayer
                 }
 
                 //glTexStorage2D(GL_TEXTURE_2D, 1, format, width, height); // OpenGL 4.2+
-                GL.TexImage2D(TextureTarget.Texture2d, 0, internalFormat, width, height, 0, format, type, IntPtr.Zero);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMinFilter, filterMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureMagFilter, filterMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapR, wrapMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapS, wrapMode);
-                GL.TexParameteri(TextureTarget.Texture2d, TextureParameterName.TextureWrapT, wrapMode);
+                GL.TexImage2D(TextureTarget.Texture2D, 0, internalFormat, width, height, 0, format, type, IntPtr.Zero);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, filterMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, filterMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapR, wrapMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, wrapMode);
+                GL.TexParameteri(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, wrapMode);
             }
 
             GL.FramebufferTexture2D(FramebufferTarget.Framebuffer, attachmentType, GetTextureTarget(multiSampled), textureId, 0);

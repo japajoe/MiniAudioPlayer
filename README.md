@@ -14,7 +14,7 @@ Example audio player using [MiniAudioExNET](https://github.com/japajoe/MiniAudio
 // You can use these existing uniforms, don't declare them, this is just an example!
 uniform sampler2D uTexture; //Texture of the previous frame
 uniform sampler2D uAudio; //Texture containing PCM data in the red channel, FFT in the first half of the green channel
-uniform vec2 uResolution; //The resolution
+uniform vec2 uResolution; //The resolution of the visualization window.
 uniform float uTime; //The elapsed time
 
 //Existing variants, don't declare, just use!

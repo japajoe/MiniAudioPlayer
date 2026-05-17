@@ -63,7 +63,7 @@ namespace MiniAudioPlayer
         {
             window.MinimumSize = new Vector2i(512, 512);
 
-            ImGuiStyle.UseCatppuccinMochaStyle();
+            GuiStyle.UseCatppuccinMochaStyle();
 
             audioPlayer = new AudioPlayer();
             visualizer = new Visualizer();

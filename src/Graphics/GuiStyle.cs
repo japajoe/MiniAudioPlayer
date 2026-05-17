@@ -3,7 +3,7 @@ using ImGuiNET;
 
 namespace MiniAudioPlayer
 {
-    public static class ImGuiStyle
+    public static class GuiStyle
     {
         public static void UseCatppuccinMochaStyle()
         {
